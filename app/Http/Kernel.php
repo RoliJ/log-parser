@@ -45,6 +45,7 @@ class Kernel extends HttpKernel
             \Laravel\Passport\Http\Middleware\CreateFreshApiToken::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \Rakutentech\LaravelRequestDocs\LaravelRequestDocsMiddleware::class,
         ],
     ];
 
