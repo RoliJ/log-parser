@@ -1,7 +1,7 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LogController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,8 +15,18 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// Register route: Accepts POST requests for user registration
+Route::post('/register', [AuthController::class, 'register'])->name('register');
 
-Route::get('/logs/count', [LogController::class, 'countLogs']);
+// Login route: Accepts POST requests for user authentication
+Route::post('/login', [AuthController::class, 'login'])->name('login');
+
+// Group routes that require authentication with 'auth:api' middleware
+Route::group(['middleware' => ['api', 'auth:api']], function () {
+
+    // Logout route: Accepts POST requests for user logout
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    // Logs count route: Accepts GET requests to retrieve the count of logs
+    Route::get('/logs/count', [LogController::class, 'countLogs'])->name('logs.count');
+});
