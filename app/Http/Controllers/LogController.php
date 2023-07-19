@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use App\Http\Requests\CountLogsRequest;
 use App\Models\Log;
 
 class LogController extends Controller
 {
-    public function countLogs(Request $request)
+    public function countLogs(CountLogsRequest $request)
     {
-        // Retrieve the filter parameters from the request
+        // Retrieve the validated filter parameters from the request
         $serviceNames = $request->serviceNames;
         $statusCode = $request->statusCode;
         $startDate = $request->startDate;
