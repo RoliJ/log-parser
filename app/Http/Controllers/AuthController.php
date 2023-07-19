@@ -7,7 +7,9 @@ use App\Http\Requests\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Passport\RefreshToken;
 use Laravel\Passport\Token;
+use Laravel\Passport\TokenRepository;
 
 class AuthController extends Controller
 {
@@ -67,21 +69,25 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $tokenRepository = app(TokenRepository::class);
+
         $user = auth('api')->user();
 
-        // Get the access token from the request
-        $accessToken = $user->token();
+        if ($user) {
+            $tokenRepository->revokeAccessToken($user->token()->id);
+            $tokens =  $user->tokens->pluck('id');
+            Token::whereIn('id', $tokens)
+                ->update(['revoked'=> true]);
 
-        // Revoke the access token
-        $accessToken->revoke();
+            RefreshToken::whereIn('access_token_id', $tokens)->update(['revoked' => true]);
 
-        // Remove the access token from the database
-        Token::where('user_id', $user->id)->delete();
+            // Invalidate the user's session
+            $request->session()->invalidate();
 
-        // Invalidate the user's session
-        $request->session()->invalidate();
-
-        // Return success message
-        return response()->json(['message' => 'Logged out successfully']);
+            // Return success message
+            return response()->json(['message' => 'Logged out successfully']);
+        } else {
+            return response()->json(['message' => 'Already Logged out']);
+        }
     }
 }

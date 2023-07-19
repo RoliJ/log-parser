@@ -14,6 +14,23 @@ class AuthControllerTest extends TestCase
     use WithFaker;
 
     /**
+     * Set up the test environment.
+     *
+     * This method is called before each test method.
+     * It creates a personal access client and clears any previous Passport clients.
+     *
+     * @return void
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Create a personal access client
+        // $this->artisan('passport:install');
+        $this->artisan('passport:client', ['--name' => config('app.name'), '--personal' => null]);
+    }
+
+    /**
      * Test user registration.
      *
      * @return void
@@ -26,8 +43,8 @@ class AuthControllerTest extends TestCase
             'password' => 'password',
             'password_confirmation' => 'password',
         ];
-        $response = $this->postJson('api/register', $userData);
-        dd($response);
+        $response = $this->postJson('/api/register', $userData);
+
         $response->assertStatus(201)
             ->assertJsonStructure(['token']);
     }
@@ -46,7 +63,7 @@ class AuthControllerTest extends TestCase
             'password' => 'password',
         ];
 
-        $response = $this->postJson('api/login', $loginData);
+        $response = $this->postJson('/api/login', $loginData);
 
         $response->assertStatus(200)
             ->assertJsonStructure(['token']);
@@ -63,7 +80,7 @@ class AuthControllerTest extends TestCase
 
         Passport::actingAs($user);
 
-        $response = $this->postJson('api/logout');
+        $response = $this->postJson('/api/logout');
 
         $response->assertStatus(200)
             ->assertJson(['message' => 'Logged out successfully']);
