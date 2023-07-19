@@ -65,7 +65,8 @@ class ParseLog extends Command
 
                 // Parse and validate each log line before inserting
                 try {
-                    $parsedLogLine = $this->parseLogLine($line);
+                    $parsedLogLine = $this->parseLogLine($line, $lineCount);
+                    $parsedLogLine['line_number'] = $this->getFileLineNumber($line, $file);
                     $validatedData = $this->validateLogLine($parsedLogLine);
                     $logData[] = $validatedData;
                 } catch (\Exception $e) {
@@ -122,7 +123,7 @@ class ParseLog extends Command
      * @return array
      * @throws \Exception
      */
-    private function parseLogLine($line)
+    private function parseLogLine($line, $lineNumber = null)
     {
         $parts = explode(' ', $line);
 
@@ -136,6 +137,9 @@ class ParseLog extends Command
 
         // Create an array with the parsed log data
         $parsedLogLine = [
+            'log_file_name' => basename($this->argument('file')),
+            'file_last_updated_at' => filemtime($this->argument('file')),
+            'line_number' => $lineNumber,
             'service_name' => $serviceName,
             'logged_at' => $loggedAt,
             'method' => $method,
@@ -161,6 +165,29 @@ class ParseLog extends Command
         $formattedTime = str_replace(':', '-', substr($timePart, 0, -1)); // Replace colons with dashes for proper formatting
 
         return $formattedDate . ' ' . $formattedTime;
+    }
+
+    /**
+     * Get the line number of a log line in the file.
+     *
+     * @param string $line
+     * @param resource $file
+     * @return int|null
+     */
+    private function getFileLineNumber($line, $file)
+    {
+        rewind($file); // Reset the file pointer to the beginning
+
+        $lineNumber = 1;
+        while (($fileLine = fgets($file)) !== false) {
+            if ($fileLine === $line) {
+                return $lineNumber;
+            }
+
+            $lineNumber++;
+        }
+
+        return null;
     }
 
     /**
