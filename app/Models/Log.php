@@ -28,6 +28,9 @@ class Log extends Model
      * @var array
      */
     protected $fillable = [
+        'log_file_name',
+        'file_last_updated_at',
+        'line_number',
         'service_name',
         'logged_at',
         'method',
@@ -42,6 +45,7 @@ class Log extends Model
      * @var array
      */
     protected $dates = [
+        'file_last_updated_at',
         'logged_at',
         'created_at',
         'updated_at',
@@ -58,6 +62,45 @@ class Log extends Model
     {
         // Format the logged_at attribute as desired (e.g., to a specific date and time format)
         return $this->asDateTime($value)->format('Y-m-d H:i:s');
+    }
+
+        /**
+     * Scope a query to filter logs by log file name.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $logFileName
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByLogFileName($query, $logFileName)
+    {
+        // Apply a filter to retrieve logs by log file name
+        return $query->where('log_file_name', $logFileName);
+    }
+
+    /**
+     * Scope a query to filter logs by file last updated at.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $fileLastUpdatedAt
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByFileLastUpdatedAt($query, $fileLastUpdatedAt)
+    {
+        // Apply a filter to retrieve logs by file last updated at
+        return $query->where('file_last_updated_at', $fileLastUpdatedAt);
+    }
+
+    /**
+     * Scope a query to filter logs by line number.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int  $lineNumber
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByLineNumber($query, $lineNumber)
+    {
+        // Apply a filter to retrieve logs by line number
+        return $query->where('line_number', $lineNumber);
     }
 
     /**
