@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Cache;
 use App\Http\Requests\CountLogsRequest;
+use App\Http\Resources\LogCountResource;
 use App\Models\Log;
 
 class LogController extends Controller
@@ -49,14 +50,12 @@ class LogController extends Controller
         $count = $query->count();
 
         // Create the response payload
-        $response = [
-            'count' => $count,
-        ];
+        $response = new LogCountResource($count);
 
         // Cache the response with a TTL (time-to-live) of 5 minutes
         Cache::put($cacheKey, $response, 300);
 
         // Return the response as JSON
-        return response()->json($response);
+        return $response;
     }
 }
