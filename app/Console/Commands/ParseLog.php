@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Log;
 use App\Http\Requests\LogLineRequest;
+use Carbon\Carbon;
+use Exception;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 
 /**
@@ -66,10 +68,12 @@ class ParseLog extends Command
                 // Parse and validate each log line before inserting
                 try {
                     $parsedLogLine = $this->parseLogLine($line, $lineCount);
-                    $parsedLogLine['line_number'] = $this->getFileLineNumber($line, $file);
-                    $validatedData = $this->validateLogLine($parsedLogLine);
+                    // $parsedLogLine['line_number'] = $this->getFileLineNumber($line, $file);
+                    // $validatedData = $this->validateLogLine($parsedLogLine);
+                    $validatedData = $parsedLogLine;
                     $logData[] = $validatedData;
                 } catch (\Exception $e) {
+                    dd($e);
                     $this->error('Invalid log line: ' . $line);
                     continue;
                 }
@@ -123,22 +127,22 @@ class ParseLog extends Command
      * @return array
      * @throws \Exception
      */
-    private function parseLogLine($line, $lineNumber = null)
+    private function parseLogLine($line, $lineNumber)
     {
         $parts = explode(' ', $line);
 
         // Extract the necessary information from the log line
         $serviceName = trim($parts[0], '-');
-        $loggedAt = $this->parseLoggedAt($parts[2], $parts[3]);
-        $method = trim($parts[4], '"');
-        $endpoint = trim($parts[5], '"');
-        $protocol = trim($parts[6], '"');
-        $status = (int) $parts[7];
+        $loggedAt = $this->parseLoggedAt(trim($parts[2], '[]'));
+        $method = trim($parts[3], '"');
+        $endpoint = trim($parts[4], '"');
+        $protocol = trim($parts[5], '"');
+        $status = (int) trim($parts[6], '\r\n');
 
         // Create an array with the parsed log data
         $parsedLogLine = [
             'log_file_name' => basename($this->argument('file')),
-            'file_last_updated_at' => filemtime($this->argument('file')),
+            'file_last_updated_at' => Carbon::createFromTimestamp(filemtime($this->argument('file')))->toDateTimeString(),
             'line_number' => $lineNumber,
             'service_name' => $serviceName,
             'logged_at' => $loggedAt,
@@ -146,6 +150,8 @@ class ParseLog extends Command
             'endpoint' => $endpoint,
             'protocol' => $protocol,
             'status' => $status,
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
 
         return $parsedLogLine;
@@ -158,36 +164,17 @@ class ParseLog extends Command
      * @param string $timePart
      * @return string
      */
-    private function parseLoggedAt($datePart, $timePart)
+    private function parseLoggedAt($dateTime)
     {
-        // Assuming the date and time parts are in the format: [17/Sep/2022:10:33:59]
-        $formattedDate = str_replace('/', '-', substr($datePart, 1)); // Replace slashes with dashes for proper formatting
-        $formattedTime = str_replace(':', '-', substr($timePart, 0, -1)); // Replace colons with dashes for proper formatting
+        $dateTime = explode(':', $dateTime, 2);
+        $datePart = $dateTime[0];
+        $timePart = $dateTime[1];
+
+        // Assuming the date and time parts are in the format: 17/Sep/2022:10:33:59
+        $formattedDate = Carbon::createFromFormat('d/M/Y', $datePart)->format('Y-m-d'); // Change the format for proper formatting
+        $formattedTime = $timePart;
 
         return $formattedDate . ' ' . $formattedTime;
-    }
-
-    /**
-     * Get the line number of a log line in the file.
-     *
-     * @param string $line
-     * @param resource $file
-     * @return int|null
-     */
-    private function getFileLineNumber($line, $file)
-    {
-        rewind($file); // Reset the file pointer to the beginning
-
-        $lineNumber = 1;
-        while (($fileLine = fgets($file)) !== false) {
-            if ($fileLine === $line) {
-                return $lineNumber;
-            }
-
-            $lineNumber++;
-        }
-
-        return null;
     }
 
     /**
@@ -199,7 +186,21 @@ class ParseLog extends Command
      */
     private function validateLogLine($parsedLogLine)
     {
-        $request = new LogLineRequest();
+        try {
+            $request = new LogLineRequest([ // app\Console\Commands\ParseLog.php:209
+                "log_file_name" => "logs.txt",
+                "file_last_updated_at" => 1689756505,
+                "line_number" => 1,
+                "service_name" => "order-service",
+                "logged_at" => "2022-09-17 10:21:53",
+                "method" => "POST",
+                "endpoint" => "/orders",
+                "protocol" => "HTTP/1.1",
+                "status" => 201,
+              ]);
+        } catch(Exception $e) {
+            dd($parsedLogLine);
+        }
         $request->replace($parsedLogLine);
 
         // Validate the request using the defined validation rules in the LogLineRequest class
