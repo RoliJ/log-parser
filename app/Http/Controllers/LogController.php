@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Log;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use App\Models\Log;
 
 class LogController extends Controller
 {
@@ -14,6 +15,16 @@ class LogController extends Controller
         $statusCode = $request->statusCode;
         $startDate = $request->startDate;
         $endDate = $request->endDate;
+
+        // Generate a unique cache key based on the request parameters
+        $cacheKey = md5($request->fullUrl() . serialize($request->all()));
+
+        // Check if the result is already cached
+        if (Cache::has($cacheKey)) {
+            // Retrieve the cached result and return it
+            $result = Cache::get($cacheKey);
+            return response()->json($result);
+        }
 
         // Build the query based on the filter parameters
         $query = Log::query();
@@ -37,7 +48,15 @@ class LogController extends Controller
         // Perform the count query
         $count = $query->count();
 
-        // Return the count as a JSON response
-        return response()->json(['count' => $count]);
+        // Create the response payload
+        $response = [
+            'count' => $count,
+        ];
+
+        // Cache the response with a TTL (time-to-live) of 5 minutes
+        Cache::put($cacheKey, $response, 300);
+
+        // Return the response as JSON
+        return response()->json($response);
     }
 }
