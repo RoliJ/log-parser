@@ -3,10 +3,11 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Models\Log;
 use App\Http\Requests\LogLineRequest;
+use App\Jobs\ProcessLogDataJob;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 
 /**
@@ -69,25 +70,23 @@ class ParseLog extends Command
                 try {
                     $parsedLogLine = $this->parseLogLine($line, $lineCount);
                     // $parsedLogLine['line_number'] = $this->getFileLineNumber($line, $file);
-                    // $validatedData = $this->validateLogLine($parsedLogLine);
-                    $validatedData = $parsedLogLine;
+                    $validatedData = $this->validateLogLine($parsedLogLine);
                     $logData[] = $validatedData;
+
+                    // If the chunk size is reached, dispatch the log data to the job queue for insertion
+                    if ($lineCount % $this->chunkSize === 0) {
+                        $this->dispatchJob($logData);
+                        $logData = [];
+                    }
                 } catch (\Exception $e) {
-                    dd($e);
                     $this->error('Invalid log line: ' . $line);
                     continue;
-                }
-
-                // If the chunk size is reached, insert the log data into the database
-                if ($lineCount % $this->chunkSize === 0) {
-                    $this->insertLogData($logData);
-                    $logData = [];
                 }
             }
 
             // Insert any remaining log data
             if (!empty($logData)) {
-                $this->insertLogData($logData);
+                $this->dispatchJob($logData);
             }
 
             // Close the log file
@@ -177,47 +176,45 @@ class ParseLog extends Command
         return $formattedDate . ' ' . $formattedTime;
     }
 
-    /**
-     * Validate a single log line using a request-style validation.
-     *
-     * @param array $parsedLogLine
-     * @return array
-     * @throws \Exception
-     */
-    private function validateLogLine($parsedLogLine)
-    {
-        try {
-            $request = new LogLineRequest([ // app\Console\Commands\ParseLog.php:209
-                "log_file_name" => "logs.txt",
-                "file_last_updated_at" => 1689756505,
-                "line_number" => 1,
-                "service_name" => "order-service",
-                "logged_at" => "2022-09-17 10:21:53",
-                "method" => "POST",
-                "endpoint" => "/orders",
-                "protocol" => "HTTP/1.1",
-                "status" => 201,
-              ]);
-        } catch(Exception $e) {
-            dd($parsedLogLine);
-        }
-        $request->replace($parsedLogLine);
+/**
+ * Validate a single log line using a request-style validation.
+ *
+ * @param array $parsedLogLine
+ * @return array|null
+ * @throws \Exception
+ */
+private function validateLogLine($parsedLogLine)
+{
+    $validator = Validator::make($parsedLogLine, [
+        'log_file_name' => 'required|string|max:255',
+        'file_last_updated_at' => 'required|date_format:Y-m-d H:i:s',
+        'line_number' => 'required|integer|min:1',
+        'service_name' => 'required|string|max:255',
+        'logged_at' => 'required|date_format:Y-m-d H:i:s',
+        'method' => 'required|string|max:10',
+        'endpoint' => 'required|string|max:255',
+        'protocol' => 'required|string|max:20',
+        'status' => 'required|integer|min:100|max:599',
+    ]);
 
-        // Validate the request using the defined validation rules in the LogLineRequest class
-        $validatedData = $request->validate();
-
-        return $validatedData;
+    if ($validator->fails()) {
+        // If validation fails, log the errors and return null to skip this line
+        $this->error('Invalid log line: ' . $validator->errors()->first());
     }
 
+    // If validation succeeds, return the validated data
+    return $validator->validated();
+}
+
     /**
-     * Insert the log data into the database.
+     * Dispatch the job to insert log data into the database.
      *
      * @param array $logData
      * @return void
      */
-    private function insertLogData($logData)
+    private function dispatchJob($logData)
     {
-        // Use the Log model's insert method to efficiently insert the log data in bulk
-        Log::insert($logData);
+        $job = new ProcessLogDataJob($logData);
+        dispatch($job);
     }
 }
