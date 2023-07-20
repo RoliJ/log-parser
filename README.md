@@ -92,9 +92,7 @@ The chosen database for this project is MySQL, and the database name is `log_par
 | method              | VARCHAR     | The HTTP method of the request     |
 | endpoint            | VARCHAR     | The API endpoint accessed          |
 | protocol            | VARCHAR     | The HTTP protocol used             |
-| status             
-
- | INTEGER     | The HTTP status code               |
+| status             | INTEGER     | The HTTP status code               |
 | created_at          | TIMESTAMP   | The creation timestamp of the entry|
 | updated_at          | TIMESTAMP   | The update timestamp of the entry  |
 | deleted_at          | TIMESTAMP   | The soft delete timestamp          |
