@@ -1,5 +1,3 @@
-Certainly! Here's the updated version with a table of contents at the beginning:
-
 # Table of Contents
 
 1. [Log Parser and Log Count API](#log-parser-and-log-count-api)
@@ -188,7 +186,3 @@ As part of future improvements, the following enhancements are planned:
 The security level of this application is deemed strong due to the integration of Laravel Passport for authentication and the robustness of the Laravel framework itself.
 
 For any questions, feedback, or inquiries, please feel free to contact the author, Rouhollah Joveini, via email at r.joveini@gmail.com.
-
----
-
-Thank you for reviewing this documentation. If you have any suggestions for further improvements or would like to discuss any aspect of the project, please do not hesitate to reach out.
